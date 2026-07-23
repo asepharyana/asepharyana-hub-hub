@@ -1,13 +1,17 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { DashboardData } from "@/lib/dashboard/types";
 
 export function DashboardHeader() {
   const [degraded, setDegraded] = useState(0);
   const [total, setTotal] = useState(0);
   const [time, setTime] = useState("");
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -74,6 +78,15 @@ export function DashboardHeader() {
               ? `${degraded} degraded`
               : "All Systems Operational"}
         </Badge>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          aria-label="Toggle theme"
+        >
+          <Sun className="hidden dark:block!" />
+          <Moon className="block dark:hidden!" />
+        </Button>
         <span className="text-[10px] text-muted-foreground">{time}</span>
       </div>
     </header>
