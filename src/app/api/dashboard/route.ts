@@ -163,7 +163,7 @@ export async function GET() {
       promQuery(`rate(node_network_receive_bytes_total{device!="lo"}[1m])`),
       promQuery(`rate(node_network_transmit_bytes_total{device!="lo"}[1m])`),
       promRange('sum(rate(traefik_service_requests_total[1m]))'),
-      promRange('avg(traefik_service_request_duration_ms_sum / traefik_service_request_duration_ms_count)'),
+      promRange('avg(traefik_service_request_duration_seconds_sum / traefik_service_request_duration_seconds_count) * 1000'),
       promRange('sum(rate(traefik_service_requests_total{code=~"5.."}[1m]))'),
     ]);
 
