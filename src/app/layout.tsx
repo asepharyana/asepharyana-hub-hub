@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { DashboardHeader } from "@/components/dashboard/header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Asep Haryana Saputra — Hub",
+  title: "Asep Haryana Saputra",
   description:
-    "Personal portfolio and infrastructure monitoring dashboard by Asep Haryana Saputra.",
+    "Backend & infrastructure engineer — portfolio, projects, and live monitoring dashboard by Asep Haryana Saputra.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col bg-background text-foreground">
+        <DashboardHeader />
+        {children}
+      </body>
     </html>
   );
 }
