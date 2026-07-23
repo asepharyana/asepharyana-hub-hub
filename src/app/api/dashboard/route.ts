@@ -109,7 +109,7 @@ async function promRange(query: string, steps = 20): Promise<number[]> {
   const u = `${PROMETHEUS}/api/v1/query_range?query=${encodeURIComponent(query)}&start=${now - 300}&end=${now}&step=${(300 / steps).toFixed(0)}`;
   const d = await fetchJSON(u);
   const result = (d as { data?: { result?: { values?: unknown[][] }[] } })?.data?.result;
-  if (!result?.length) return [];
+  if (!result?.[0]?.values) return [];
   return result[0].values.map((v) => { const f = parseFloat(v[1] as string); return isNaN(f) ? 0 : f; });
 }
 
