@@ -29,6 +29,10 @@ interface DashboardData {
     netIn: number | null;
     netOut: number | null;
   };
+  rps: number[];
+  latency: number[];
+  errors: number[];
+  traceVolume: number[];
   links: { url: string; label: string }[];
 }
 
@@ -177,6 +181,7 @@ export default function Dashboard() {
   const running = data?.services.filter(s => s.state === 'running').length ?? 0;
   const degraded = (data?.services.length ?? 0) - running;
   const hasNode = data?.node.cpu !== null || data?.node.ram !== null;
+  const hasTraffik = (data?.rps?.length ?? 0) > 0 || (data?.latency?.length ?? 0) > 0;
   const hasOTel = false;
   const node = data?.node;
   const gaugeColor = (v: number | null) => {
@@ -300,6 +305,36 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* Request Rate */}
+          {hasTraffik && (
+            <div className="card">
+              <div className="card-h"><h2>Request Rate</h2><span className="badge">{data?.rps?.length ? `${data.rps[data.rps.length - 1].toFixed(1)}/s` : '-'}</span></div>
+              <div className="card-c"><Sparkline data={data?.rps ?? []} color="#58a6ff" /></div>
+            </div>
+          )}
+
+          {/* Latency */}
+          {hasTraffik && (
+            <div className="card">
+              <div className="card-h"><h2>Latency</h2><span className="badge">{data?.latency?.length ? `${data.latency[data.latency.length - 1].toFixed(0)}ms` : '-'}</span></div>
+              <div className="card-c"><Sparkline data={data?.latency ?? []} color="#bc8cff" /></div>
+            </div>
+          )}
+
+          {/* Error Rate */}
+          {hasTraffik && (
+            <div className="card">
+              <div className="card-h"><h2>Error Rate</h2><span className="badge">{data?.errors?.length ? `${data.errors[data.errors.length - 1].toFixed(1)}/s` : '-'}</span></div>
+              <div className="card-c"><Sparkline data={data?.errors ?? []} color="#f85149" /></div>
+            </div>
+          )}
+
+          {/* Trace Volume */}
+          <div className="card">
+            <div className="card-h"><h2>Trace Volume</h2><span className="badge">{data?.traces.length ?? 0} traces</span></div>
+            <div className="card-c"><Sparkline data={data?.traceVolume ?? []} color="#3fb950" /></div>
+          </div>
 
           {/* Traces */}
           <div className="card">

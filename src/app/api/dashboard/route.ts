@@ -104,6 +104,15 @@ async function fetchTraces(): Promise<Trace[]> {
   return all.sort((a, b) => b.duration - a.duration).slice(0, 20);
 }
 
+async function promRange(query: string, steps = 20): Promise<number[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const u = `${PROMETHEUS}/api/v1/query_range?query=${encodeURIComponent(query)}&start=${now - 300}&end=${now}&step=${(300 / steps).toFixed(0)}`;
+  const d = await fetchJSON(u);
+  const result = (d as { data?: { result?: { values?: unknown[][] }[] } })?.data?.result;
+  if (!result?.length) return [];
+  return result[0].values.map((v) => { const f = parseFloat(v[1] as string); return isNaN(f) ? 0 : f; });
+}
+
 async function promQuery(query: string): Promise<number | null> {
   const d = await fetchJSON(
     `${PROMETHEUS}/api/v1/query?query=${encodeURIComponent(query)}`,
@@ -127,6 +136,10 @@ interface DashboardData {
     netIn: number | null;
     netOut: number | null;
   };
+  rps: number[];
+  latency: number[];
+  errors: number[];
+  traceVolume: number[];
   links: { url: string; label: string }[];
 }
 
@@ -138,7 +151,7 @@ export async function GET() {
   const containers = Array.isArray(containersRaw) ? containersRaw : [];
   const services = parseServices(containers);
 
-  const [traces, cpu, ram, disk, load1, load5, load15, netIn, netOut] =
+  const [traces, cpu, ram, disk, load1, load5, load15, netIn, netOut, rps, latency, errors] =
     await Promise.all([
       fetchTraces(),
       promQuery(`100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)`),
@@ -149,6 +162,9 @@ export async function GET() {
       promQuery('node_load15'),
       promQuery(`rate(node_network_receive_bytes_total{device!="lo"}[1m])`),
       promQuery(`rate(node_network_transmit_bytes_total{device!="lo"}[1m])`),
+      promRange('sum(rate(traefik_service_requests_total[1m]))'),
+      promRange('avg(traefik_service_request_duration_ms_sum / traefik_service_request_duration_ms_count)'),
+      promRange('sum(rate(traefik_service_requests_total{code=~"5.."}[1m]))'),
     ]);
 
   const links: { url: string; label: string }[] = [
@@ -166,10 +182,13 @@ export async function GET() {
     }
   }
 
+  const traceVolume = [traces.length];
+
   const data: DashboardData = {
     services,
     traces,
     node: { cpu, ram, disk, load1, load5, load15, netIn, netOut },
+    rps, latency, errors, traceVolume,
     links,
   };
 
