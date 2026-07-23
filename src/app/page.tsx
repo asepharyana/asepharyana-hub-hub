@@ -98,15 +98,15 @@ export default function Home() {
               I&rsquo;m a Teknik Informatika student passionate about backend
               engineering, distributed systems, and infrastructure. I spend my
               time building RESTful APIs, learning container orchestration with
-              Docker &amp; Traefik, and exploring observability with OpenTelemetry
-              &amp; Jaeger.
+              Docker &amp; Traefik, and exploring observability with
+              OpenTelemetry &amp; Jaeger.
             </p>
             <p>
               I was the Back-End lead on the ZeaVis Edu capstone team (&ldquo;AI
-              for Smart Education&rdquo; by Pijak &times; IBM SkillsBuild),
-              a 5-person team with task division across Back-End, Front-End,
-              and Machine Learning. I handled the system architecture, API
-              design, RESTful API development, and Docker deployment on VPS.
+              for Smart Education&rdquo; by Pijak &times; IBM SkillsBuild), a
+              5-person team with task division across Back-End, Front-End, and
+              Machine Learning. I handled the system architecture, API design,
+              RESTful API development, and Docker deployment on VPS.
             </p>
           </div>
         </div>
@@ -260,8 +260,8 @@ export default function Home() {
             </p>
             <p className="max-w-md text-sm text-muted-foreground">
               The dashboard tracks Docker services, Traefik request metrics,
-              Prometheus system resources, and Jaeger traces — all running on
-              my VPS deployment.
+              Prometheus system resources, and Jaeger traces — all running on my
+              VPS deployment.
             </p>
             <a href="/dashboard" className={cn(buttonVariants())}>
               Live Dashboard

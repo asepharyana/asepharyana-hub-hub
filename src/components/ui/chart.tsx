@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
+import * as RechartsPrimitive from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -200,13 +200,17 @@ function ChartTooltipContent({
         {payload
           .filter((item) => item.type !== "none")
           .map((item, index) => {
-            const key = `${nameKey ?? item.name ?? item.dataKey ?? "value"}`;
-            const itemConfig = getPayloadConfigFromPayload(config, item, key);
+            const itemKey = `${nameKey ?? item.name ?? item.dataKey ?? "value"}-${index}`;
+            const itemConfig = getPayloadConfigFromPayload(
+              config,
+              item,
+              itemKey,
+            );
             const indicatorColor = color ?? item.payload?.fill ?? item.color;
 
             return (
               <div
-                key={index}
+                key={itemKey}
                 className={cn(
                   "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                   indicator === "dot" && "items-center",
@@ -299,12 +303,12 @@ function ChartLegendContent({
       {payload
         .filter((item) => item.type !== "none")
         .map((item, index) => {
-          const key = `${nameKey ?? item.dataKey ?? "value"}`;
-          const itemConfig = getPayloadConfigFromPayload(config, item, key);
+          const itemKey = `${nameKey ?? item.dataKey ?? "value"}-${index}`;
+          const itemConfig = getPayloadConfigFromPayload(config, item, itemKey);
 
           return (
             <div
-              key={index}
+              key={itemKey}
               className={cn(
                 "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
               )}

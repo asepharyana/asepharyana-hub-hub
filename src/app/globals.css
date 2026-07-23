@@ -133,7 +133,9 @@
 .dark *:focus-visible {
   @apply ring-[3px];
   outline: none;
-  box-shadow: 0 0 8px oklch(0.7 0.15 75 / 0.3), 0 0 0 3px oklch(0.7 0.15 75 / 0.5);
+  box-shadow:
+    0 0 8px oklch(0.7 0.15 75 / 0.3),
+    0 0 0 3px oklch(0.7 0.15 75 / 0.5);
 }
 html:not(.dark) *:focus-visible {
   @apply ring-[3px];

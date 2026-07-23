@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import http from "node:http";
+import { NextResponse } from "next/server";
 
 const JAEGER = "http://jaeger:16686";
 const PROMETHEUS = "http://prometheus:9090";
@@ -31,7 +31,9 @@ function dockerFetch(path: string): Promise<unknown> {
     http
       .get({ socketPath: DOCKER_SOCK, path }, (res) => {
         let data = "";
-        res.on("data", (c: string) => (data += c));
+        res.on("data", (c: string) => {
+          data += c;
+        });
         res.on("end", () => {
           try {
             resolve(JSON.parse(data));
@@ -129,7 +131,7 @@ async function promRange(query: string, steps = 20): Promise<number[]> {
   if (!result?.[0]?.values) return [];
   return result[0].values.map((v) => {
     const f = parseFloat(v[1] as string);
-    return isNaN(f) ? 0 : f;
+    return Number.isNaN(f) ? 0 : f;
   });
 }
 
