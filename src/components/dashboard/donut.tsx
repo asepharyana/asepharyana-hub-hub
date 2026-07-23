@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { NoData } from "./no-data";
 
 export function Donut({
@@ -21,19 +24,24 @@ export function Donut({
 
   let off = 0;
   return (
-    <svg
+    <motion.svg
       width={200}
       height={210}
       viewBox="0 0 200 210"
       role="img"
       aria-label="Service health donut chart"
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.25, 0.1, 0, 1] }}
     >
       {segs.map((s) => {
         if (!s.n) return null;
         const frac = s.n / total;
         const ln = frac * circ;
-        const el = (
-          <circle
+        const dashOffset = -off;
+        off += ln;
+        return (
+          <motion.circle
             key={s.l}
             cx={cx}
             cy={cy}
@@ -42,24 +50,31 @@ export function Donut({
             stroke={s.c}
             strokeWidth={14}
             strokeDasharray={`${ln} ${circ - ln}`}
-            strokeDashoffset={-off}
+            strokeDashoffset={dashOffset}
             transform={`rotate(-90 ${cx} ${cy})`}
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 0.2, ease: [0.25, 0.1, 0, 1] }}
+            strokeLinecap="round"
           />
         );
-        off += ln;
-        return el;
       })}
-      <text
+      {/* Center total number */}
+      <motion.text
         x={cx}
         y={cy - 4}
         textAnchor="middle"
-        fill="#e6edf3"
+        fill="currentColor"
+        className="fill-foreground"
         fontSize={26}
         fontWeight={700}
         fontFamily="system-ui,sans-serif"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.6 }}
       >
         {total}
-      </text>
+      </motion.text>
       <text
         x={cx}
         y={cy + 14}
@@ -68,13 +83,30 @@ export function Donut({
         fontSize={10}
         fontFamily="system-ui,sans-serif"
       >
-        total
+        services
       </text>
       {segs
         .filter((s) => s.n)
         .map((s, i) => (
-          <g key={s.l}>
-            <circle cx={16} cy={165 + i * 16} r={4} fill={s.c} />
+          <motion.g
+            key={s.l}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.8 + i * 0.15 }}
+          >
+            <motion.circle
+              cx={16}
+              cy={165 + i * 16}
+              r={4}
+              fill={s.c}
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{
+                repeat: Number.POSITIVE_INFINITY,
+                duration: 2,
+                delay: i * 0.5,
+                ease: "easeInOut",
+              }}
+            />
             <text
               x={26}
               y={168 + i * 16}
@@ -84,8 +116,8 @@ export function Donut({
             >
               {s.l}: {s.n}
             </text>
-          </g>
+          </motion.g>
         ))}
-    </svg>
+    </motion.svg>
   );
 }

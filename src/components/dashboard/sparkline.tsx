@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { NoData } from "./no-data";
 
 const W = 300;
@@ -73,25 +76,59 @@ export function Sparkline({ data, color }: { data: number[]; color: string }) {
   const area = `M${PL},${PT + VH} L${pts} L${PL + VW},${PT + VH} Z`;
   const lv = data[data.length - 1];
   const ly = PT + VH * (1 - lv / maxV);
+  const d = `M${pts}`;
 
   return (
-    <svg
+    <motion.svg
       width={W}
       height={H}
       viewBox={`0 0 ${W} ${H}`}
       role="img"
       aria-label="Sparkline chart"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
     >
       {gridLines(maxV)}
-      <path d={area} fill={color} opacity={0.15} />
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
+
+      {/* Area fill */}
+      <motion.path
+        d={area}
+        fill={color}
+        opacity={0.15}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.15 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
       />
-      <text
+
+      {/* Animated line path */}
+      {data.length > 1 && (
+        <motion.path
+          d={d}
+          fill="none"
+          stroke={color}
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.2, ease: [0.25, 0.1, 0, 1] }}
+        />
+      )}
+
+      {/* Endpoint dot */}
+      <motion.circle
+        cx={PL + VW}
+        cy={ly}
+        r={3}
+        fill={color}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3, delay: 1.0 }}
+      />
+
+      {/* Endpoint value label */}
+      <motion.text
         x={PL + VW}
         y={ly - 10}
         textAnchor="end"
@@ -99,10 +136,14 @@ export function Sparkline({ data, color }: { data: number[]; color: string }) {
         fontSize={11}
         fontWeight={600}
         fontFamily="system-ui,sans-serif"
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 1.1 }}
       >
         {lv.toFixed(1)}
-      </text>
+      </motion.text>
+
       {xAxisLabels(data.length)}
-    </svg>
+    </motion.svg>
   );
 }

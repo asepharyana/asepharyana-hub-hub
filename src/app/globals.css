@@ -46,6 +46,75 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── Custom keyframes ── */
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 6px oklch(0.7 0.15 75 / 0.15);
+    }
+    50% {
+      box-shadow: 0 0 18px oklch(0.7 0.15 75 / 0.3);
+    }
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  @keyframes breathe {
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes border-glow {
+    0%,
+    100% {
+      border-color: var(--border);
+    }
+    50% {
+      border-color: oklch(0.7 0.15 75 / 0.4);
+    }
+  }
+
+  --animate-shimmer: shimmer 2.5s ease-in-out infinite;
+  --animate-glow-pulse: glow-pulse 3s ease-in-out infinite;
+  --animate-gradient-shift: gradient-shift 8s ease infinite;
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-breathe: breathe 3s ease-in-out infinite;
+  --animate-border-glow: border-glow 3s ease-in-out infinite;
 }
 
 :root {
@@ -125,11 +194,65 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans scroll-smooth;
   }
 }
 
-/* Signature: glowing "server LED" focus ring */
+/* ── Custom utilities ── */
+
+/* Glass card effect */
+.glass {
+  @apply bg-background/60 backdrop-blur-2xl border border-border/50 shadow-lg shadow-black/5;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-primary via-accent to-chart-3 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-shift;
+}
+
+/* Subtle grid background for hero */
+.bg-grid {
+  background-image: linear-gradient(
+      oklch(0.5 0.02 265 / 0.04) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, oklch(0.5 0.02 265 / 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.dark .bg-grid {
+  background-image: linear-gradient(
+      oklch(0.9 0.02 85 / 0.03) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, oklch(0.9 0.02 85 / 0.03) 1px, transparent 1px);
+}
+
+/* Glow accent ring */
+.glow-ring {
+  box-shadow: 0 0 12px oklch(0.7 0.15 75 / 0.15),
+    0 0 0 1px oklch(0.7 0.15 75 / 0.2);
+}
+
+/* ── Terminal cursor blink ── */
+.terminal-cursor::after {
+  content: "▊";
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+  @apply text-primary;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── Focus ring glow ── */
 .dark *:focus-visible {
   @apply ring-[3px];
   outline: none;
@@ -140,4 +263,37 @@
 html:not(.dark) *:focus-visible {
   @apply ring-[3px];
   outline: none;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: oklch(0.7 0.15 75 / 0.25);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.02 265 / 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.02 265 / 0.35);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
+  }
 }
