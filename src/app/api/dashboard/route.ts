@@ -1,16 +1,10 @@
-import http from "node:http";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { NextResponse } from "next/server";
 
-const JAEGER = "http://jaeger:16686";
-const PROMETHEUS = "http://prometheus:9090";
-const DOCKER_SOCK = "/var/run/docker.sock";
+const execFileAsync = promisify(execFile);
 
-interface Container {
-  Names: string[];
-  State: string;
-  Labels: Record<string, string>;
-  NetworkSettings?: { Networks?: Record<string, unknown> };
-}
+const PROMETHEUS = "http://127.0.0.1:9090";
 
 interface Trace {
   service: string;
@@ -26,24 +20,70 @@ interface Service {
   hasWeb: boolean;
 }
 
-function dockerFetch(path: string): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    http
-      .get({ socketPath: DOCKER_SOCK, path }, (res) => {
-        let data = "";
-        res.on("data", (c: string) => {
-          data += c;
-        });
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            resolve(null);
-          }
-        });
-      })
-      .on("error", reject);
-  });
+// Service-owning systemd units that should show up on the dashboard.
+// GMW, Booster, etc. are listed even though they are headless (no web).
+const MONITORED_UNITS = [
+  "caddy",
+  "9router",
+  "booster-role",
+  "gmw-backend",
+  "gmw-discord-gateway",
+  "hub",
+  "lidm-backend",
+  "lidm-frontend",
+  "llm-api",
+  "nats",
+  "node-exporter",
+  "otel",
+  "pr-agent-server",
+  "prometheus",
+  "scraper",
+  "teleuploader",
+  "tools-frontend",
+  "tools-gateway",
+  "tools-workers",
+  "zeavis-api",
+  "zeavis-ml-service",
+  "zeavis-web",
+];
+
+// Units with a public HTTPS site behind Caddy.
+const WEB_UNITS = new Set([
+  "caddy",
+  "9router",
+  "hub",
+  "lidm-frontend",
+  "pr-agent-server",
+  "scraper",
+  "teleuploader",
+  "tools-frontend",
+  "zeavis-web",
+]);
+
+async function systemdServices(): Promise<Service[]> {
+  const services: Service[] = [];
+  for (const unit of MONITORED_UNITS) {
+    try {
+      const { stdout } = await execFileAsync("systemctl", [
+        "show",
+        `${unit}.service`,
+        "-p",
+        "ActiveState",
+        "-p",
+        "LoadState",
+        "--no-pager",
+      ]);
+      const state = stdout.match(/ActiveState=(\w+)/)?.[1] ?? "unknown";
+      services.push({
+        name: unit,
+        state: state === "active" ? "running" : state,
+        hasWeb: WEB_UNITS.has(unit),
+      });
+    } catch {
+      // unit doesn't exist — skip silently
+    }
+  }
+  return services;
 }
 
 async function fetchJSON(url: string): Promise<unknown> {
@@ -53,73 +93,6 @@ async function fetchJSON(url: string): Promise<unknown> {
   } catch {
     return null;
   }
-}
-
-function parseServices(containers: Container[]): Service[] {
-  const project = containers.find((c) => c.Labels["com.docker.compose.project"])
-    ?.Labels["com.docker.compose.project"];
-
-  return containers
-    .filter((c) => {
-      if (!c.NetworkSettings?.Networks?.["app-shared-net"]) return false;
-      if (project && c.Labels["com.docker.compose.project"] !== project)
-        return false;
-      return true;
-    })
-    .map((c) => ({
-      name: c.Names[0].replace(/^\//, ""),
-      state: c.State,
-      hasWeb: Object.keys(c.Labels).some(
-        (k) => k.startsWith("traefik.http.routers.") && k.endsWith(".rule"),
-      ),
-    }));
-}
-
-async function fetchTraces(): Promise<Trace[]> {
-  const svcRes = await fetchJSON(`${JAEGER}/api/services`);
-  if (!svcRes || !Array.isArray((svcRes as { data?: string[] }).data))
-    return [];
-
-  const now = Date.now() * 1000;
-  const start = now - 5 * 60 * 1_000_000;
-  const all: Trace[] = [];
-
-  for (const service of (svcRes as { data: string[] }).data) {
-    const d = await fetchJSON(
-      `${JAEGER}/api/traces?service=${encodeURIComponent(service)}&start=${start}&end=${now}&limit=5&lookback=5m`,
-    );
-    if (!d || !Array.isArray((d as { data?: unknown[] }).data)) continue;
-
-    for (const t of (
-      d as {
-        data: {
-          duration: number;
-          spans: {
-            operationName: string;
-            processID: string;
-            tags: { key: string; value: unknown }[];
-          }[];
-          processes: Record<string, { serviceName: string }>;
-        }[];
-      }
-    ).data) {
-      if (!t.spans?.length) continue;
-      const span = t.spans[0];
-      const svc = t.processes[span.processID]?.serviceName || "unknown";
-      const hasError = t.spans.some((s) =>
-        s.tags?.some((tag) => tag.key === "error" && tag.value === true),
-      );
-      all.push({
-        service: svc,
-        operation: span.operationName,
-        duration: t.duration,
-        spans: t.spans.length,
-        hasError,
-      });
-    }
-  }
-
-  return all.sort((a, b) => b.duration - a.duration).slice(0, 20);
 }
 
 async function promRange(query: string, steps = 20): Promise<number[]> {
@@ -167,15 +140,9 @@ interface DashboardData {
 }
 
 export async function GET() {
-  const [containersRaw] = await Promise.all([
-    dockerFetch("/containers/json?all=true") as Promise<Container[]>,
-  ]);
-
-  const containers = Array.isArray(containersRaw) ? containersRaw : [];
-  const services = parseServices(containers);
+  const services = await systemdServices();
 
   const [
-    traces,
     cpu,
     ram,
     disk,
@@ -187,8 +154,8 @@ export async function GET() {
     rps,
     latency,
     errors,
+    traceVolume,
   ] = await Promise.all([
-    fetchTraces(),
     promQuery(
       `100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)`,
     ),
@@ -203,41 +170,30 @@ export async function GET() {
     promQuery("node_load15"),
     promQuery(`rate(node_network_receive_bytes_total{device!="lo"}[1m])`),
     promQuery(`rate(node_network_transmit_bytes_total{device!="lo"}[1m])`),
-    promRange("sum(rate(traefik_service_requests_total[1m]))"),
-    promRange(
-      "avg(traefik_service_request_duration_seconds_sum / traefik_service_request_duration_seconds_count) * 1000",
-    ),
-    promRange('sum(rate(traefik_service_requests_total{code=~"5.."}[1m]))'),
+    promRange('sum(rate(node_network_receive_bytes_total{device!="lo"}[1m]))'),
+    promRange("avg(node_load1)"),
+    promRange('sum(rate(node_network_transmit_bytes_total{device!="lo"}[1m]))'),
+    promQuery("count(up)"),
   ]);
 
   const links: { url: string; label: string }[] = [
-    { url: "/jaeger", label: "Jaeger UI" },
+    { url: "https://github.com/asepharyana/asepharyana-hub", label: "GitHub" },
   ];
-  if (containers.some((c) => c.Names?.some((n) => n.includes("prometheus")))) {
-    links.push({ url: "/api/prometheus/targets", label: "Prometheus" });
-  }
-  links.push({
-    url: "https://github.com/asepharyana/asepharyana-hub",
-    label: "GitHub",
-  });
-
-  const domains = ["asepharyana.my.id", "asepharyana.web.id"];
+  const domains = ["asepharyana.my.id"];
   for (const s of services) {
     if (s.hasWeb && s.state === "running") {
       links.push({ url: `https://${s.name}.${domains[0]}`, label: s.name });
     }
   }
 
-  const traceVolume = [traces.length];
-
   const data: DashboardData = {
     services,
-    traces,
+    traces: [],
     node: { cpu, ram, disk, load1, load5, load15, netIn, netOut },
     rps,
     latency,
     errors,
-    traceVolume,
+    traceVolume: traceVolume ? [traceVolume] : [],
     links,
   };
 
