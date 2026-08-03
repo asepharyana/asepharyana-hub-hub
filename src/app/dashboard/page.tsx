@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedNumber } from "@/components/ui/motion-primitives";
 import {
   type DashboardData,
+  fmtUptime,
   gaugeColor,
   safeDur,
   serviceIndicator,
@@ -229,6 +230,73 @@ export default function Dashboard() {
             </Card>
           </motion.div>
         )}
+
+        {/* LLM Inference */}
+        <motion.div variants={cardVariants}>
+          <Card className="transition-shadow duration-300 hover:shadow-md hover:shadow-border/20">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>LLM Inference</CardTitle>
+              <Badge variant="secondary" className="font-mono text-[10px] font-normal">
+                {data?.llm.uptime != null
+                  ? `${fmtUptime(data.llm.uptime)} up`
+                  : "no data"}
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-1.5">
+                <StatBox
+                  value={
+                    data?.llm.reqRate != null
+                      ? data.llm.reqRate.toFixed(1)
+                      : undefined
+                  }
+                  label="Req/s (5m)"
+                  color="text-blue-400"
+                />
+                <StatBox
+                  value={
+                    data?.llm.tokRate != null
+                      ? `${data.llm.tokRate.toFixed(0)}`
+                      : undefined
+                  }
+                  label="Tokens/s (5m)"
+                  color="text-green-400"
+                />
+                <StatBox
+                  value={
+                    data?.llm.tokSpeed != null
+                      ? `${data.llm.tokSpeed.toFixed(0)}`
+                      : undefined
+                  }
+                  label="Gen tok/s"
+                  color="text-purple-400"
+                />
+                <StatBox
+                  value={data?.llm.reqSpark?.length ? "live" : undefined}
+                  label="Sparkline"
+                  color="text-yellow-400"
+                />
+              </div>
+              {data?.llm.reqSpark?.length ? (
+                <div className="mt-2">
+                  <Sparkline data={data.llm.reqSpark} color="#58a6ff" />
+                </div>
+              ) : (
+                <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                  No traffic yet &mdash; send a prompt on{" "}
+                  <a
+                    className="text-blue-400 underline"
+                    href="https://ai.asepharyana.my.id"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ai.asepharyana.my.id
+                  </a>
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Request Rate */}
         {hasTraffik && (

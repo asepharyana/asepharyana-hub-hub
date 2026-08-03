@@ -30,6 +30,14 @@ export interface DashboardData {
   errors: number[];
   traceVolume: number[];
   links: { url: string; label: string }[];
+  llm: {
+    reqRate: number | null;
+    tokRate: number | null;
+    tokSpeed: number | null;
+    uptime: number | null;
+    reqSpark: number[];
+    tokSpark: number[];
+  };
 }
 
 export function safeDur(us: number): string {
@@ -54,4 +62,15 @@ export function serviceIndicator(state: string): string {
     default:
       return "bg-red-400";
   }
+}
+
+export function fmtUptime(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
 }

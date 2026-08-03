@@ -137,6 +137,14 @@ interface DashboardData {
   errors: number[];
   traceVolume: number[];
   links: { url: string; label: string }[];
+  llm: {
+    reqRate: number | null;
+    tokRate: number | null;
+    tokSpeed: number | null;
+    uptime: number | null;
+    reqSpark: number[];
+    tokSpark: number[];
+  };
 }
 
 export async function GET() {
@@ -176,6 +184,33 @@ export async function GET() {
     promQuery("count(up)"),
   ]);
 
+  // ── LLM inference metrics (llm-api /metrics) ──
+  const [
+    llmReqRate,
+    llmTokRate,
+    llmTokSpeed,
+    llmUptime,
+    llmReqSpark,
+    llmTokSpark,
+  ] = await Promise.all([
+    promQuery(
+      `sum(rate(llm_api_requests_total{service="llm-api"}[5m]))`,
+    ),
+    promQuery(
+      `sum(rate(llm_api_completion_tokens_total{service="llm-api"}[5m]))`,
+    ),
+    promQuery(
+      `avg(llm_api_tokens_per_second{service="llm-api"})`,
+    ),
+    promQuery(`llm_api_uptime_seconds{service="llm-api"}`),
+    promRange(
+      `sum(rate(llm_api_requests_total{service="llm-api"}[1m]))`,
+    ),
+    promRange(
+      `sum(rate(llm_api_completion_tokens_total{service="llm-api"}[1m]))`,
+    ),
+  ]);
+
   const links: { url: string; label: string }[] = [
     { url: "https://github.com/asepharyana/asepharyana-hub", label: "GitHub" },
   ];
@@ -195,6 +230,14 @@ export async function GET() {
     errors,
     traceVolume: traceVolume ? [traceVolume] : [],
     links,
+    llm: {
+      reqRate: llmReqRate,
+      tokRate: llmTokRate,
+      tokSpeed: llmTokSpeed,
+      uptime: llmUptime,
+      reqSpark: llmReqSpark,
+      tokSpark: llmTokSpark,
+    },
   };
 
   return NextResponse.json(data);
