@@ -159,10 +159,10 @@ export async function GET() {
     load15,
     netIn,
     netOut,
-    rps,
-    latency,
-    errors,
-    traceVolume,
+    netInSpark,
+    loadSpark,
+    netOutSpark,
+    upstreamCount,
   ] = await Promise.all([
     promQuery(
       `100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)`,
@@ -183,6 +183,18 @@ export async function GET() {
     promRange('sum(rate(node_network_transmit_bytes_total{device!="lo"}[1m]))'),
     promQuery("count(up)"),
   ]);
+
+  // ── Error rate (llm-api) & request rate (any /metrics service) ──
+  const [errRate, errSpark] = await Promise.all([
+    promQuery(`sum(rate(llm_api_errors_total[5m]))`),
+    promRange(`sum(rate(llm_api_errors_total[1m]))`),
+  ]);
+  const reqRate = await promQuery(
+    `sum(rate(llm_api_requests_total[5m])) + sum(rate(http_server_request_count_total[5m]))`,
+  );
+  const reqSpark = await promRange(
+    `sum(rate(llm_api_requests_total[1m])) + sum(rate(http_server_request_count_total[1m]))`,
+  );
 
   // ── LLM inference metrics (llm-api /metrics) ──
   const [
@@ -225,10 +237,10 @@ export async function GET() {
     services,
     traces: [],
     node: { cpu, ram, disk, load1, load5, load15, netIn, netOut },
-    rps,
-    latency,
-    errors,
-    traceVolume: traceVolume ? [traceVolume] : [],
+    rps: reqSpark,
+    latency: loadSpark,
+    errors: errSpark,
+    traceVolume: netInSpark,
     links,
     llm: {
       reqRate: llmReqRate,

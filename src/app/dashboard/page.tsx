@@ -60,8 +60,8 @@ export default function Dashboard() {
     data?.services.filter((s) => s.state === "running").length ?? 0;
   const degraded = (data?.services.length ?? 0) - running;
   const hasNode = data?.node.cpu !== null || data?.node.ram !== null;
-  const hasTraffik =
-    (data?.rps?.length ?? 0) > 0 || (data?.latency?.length ?? 0) > 0;
+  const hasTraffic =
+    (data?.rps?.length ?? 0) > 0 || (data?.errors?.length ?? 0) > 0;
   const node = data?.node;
 
   return (
@@ -147,7 +147,15 @@ export default function Dashboard() {
                   label="Traces"
                   color="text-blue-400"
                 />
-                <StatBox value={0} label="Errors" color="text-red-400" />
+                <StatBox
+                  value={
+                    data?.errors?.length
+                      ? data.errors[data.errors.length - 1].toFixed(2)
+                      : undefined
+                  }
+                  label="LLM err/s"
+                  color="text-red-400"
+                />
               </div>
             </CardContent>
           </Card>
@@ -299,7 +307,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Request Rate */}
-        {hasTraffik && (
+        {hasTraffic && (
           <motion.div variants={cardVariants}>
             <Card className="transition-shadow duration-300 hover:shadow-md hover:shadow-border/20">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -317,15 +325,15 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Latency */}
-        {hasTraffik && (
+        {/* Load Average */}
+        {hasNode && (
           <motion.div variants={cardVariants}>
             <Card className="transition-shadow duration-300 hover:shadow-md hover:shadow-border/20">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Latency</CardTitle>
+                <CardTitle>Load Average</CardTitle>
                 <Badge variant="secondary" className="text-[10px] font-normal">
                   {data?.latency?.length
-                    ? `${data.latency[data.latency.length - 1].toFixed(0)}ms`
+                    ? data.latency[data.latency.length - 1].toFixed(2)
                     : "-"}
                 </Badge>
               </CardHeader>
@@ -337,7 +345,7 @@ export default function Dashboard() {
         )}
 
         {/* Error Rate */}
-        {hasTraffik && (
+        {hasTraffic && (
           <motion.div variants={cardVariants}>
             <Card className="transition-shadow duration-300 hover:shadow-md hover:shadow-border/20">
               <CardHeader className="flex flex-row items-center justify-between">
